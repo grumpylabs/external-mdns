@@ -26,7 +26,7 @@ spec:
           allowPrivilegeEscalation: false
           capabilities:
             drop: ["ALL"]
-        image: external-mdns # Skaffold sostituirà questo con l'immagine buildata
+        image: macrbg/external-mdns:0873b7f3 # Skaffold sostituirà questo con l'immagine buildata
         args:
         - -source=ingress
         - -source=service

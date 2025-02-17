@@ -18,7 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blake/external-mdns/resource"
+	"github.com/grumpylabs/external-mdns/cmd/mdns/resource"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
@@ -27,6 +28,7 @@ import (
 
 // ServiceSource handles adding, updating, or removing mDNS record advertisements
 type ServiceSource struct {
+	lg              *zap.Logger
 	namespace       string
 	publishInternal bool
 	notifyChan      chan<- resource.Resource
@@ -48,7 +50,7 @@ func (s *ServiceSource) onAdd(obj interface{}) {
 
 	if err != nil {
 		for _, name := range advertiseResource.Names {
-			fmt.Printf("updating, %s", name)
+			s.lg.Info("updating", zap.String("name", name))
 		}
 	}
 
@@ -64,7 +66,7 @@ func (s *ServiceSource) onDelete(obj interface{}) {
 
 	if err != nil {
 		for _, name := range advertiseResource.Names {
-			fmt.Printf("Error deleting, %s", name)
+			s.lg.Info("Error deleting", zap.String("name", name))
 		}
 	}
 	s.notifyChan <- advertiseResource
@@ -73,13 +75,13 @@ func (s *ServiceSource) onDelete(obj interface{}) {
 func (s *ServiceSource) onUpdate(oldObj interface{}, newObj interface{}) {
 	oldResource, err1 := s.buildRecord(oldObj, resource.Deleted)
 	if err1 != nil {
-		fmt.Printf("Error parsing old service resource: %s", err1)
+		s.lg.Info("Error parsing old service resource", zap.Error(err1))
 	}
 	s.notifyChan <- oldResource
 
 	newResource, err2 := s.buildRecord(newObj, resource.Added)
 	if err2 != nil {
-		fmt.Printf("Error parsing new service resource: %s", err2)
+		s.lg.Info("Error parsing new service resource", zap.Error(err2))
 	}
 	s.notifyChan <- newResource
 }
@@ -127,11 +129,12 @@ func (s *ServiceSource) buildRecord(obj interface{}, action string) (resource.Re
 }
 
 // NewServicesWatcher creates an ServiceSource
-func NewServicesWatcher(factory informers.SharedInformerFactory, namespace string, notifyChan chan<- resource.Resource, publishInternal *bool) ServiceSource {
+func NewServicesWatcher(lg *zap.Logger, factory informers.SharedInformerFactory, namespace string, notifyChan chan<- resource.Resource, publishInternal bool) ServiceSource {
 	servicesInformer := factory.Core().V1().Services().Informer()
 	s := &ServiceSource{
+		lg:              lg,
 		namespace:       namespace,
-		publishInternal: *publishInternal,
+		publishInternal: publishInternal,
 		notifyChan:      notifyChan,
 		sharedInformer:  servicesInformer,
 	}

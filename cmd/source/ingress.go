@@ -16,11 +16,11 @@ package source
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/blake/external-mdns/resource"
+	"github.com/grumpylabs/external-mdns/cmd/mdns/resource"
 	"github.com/jpillora/go-tld"
+	"go.uber.org/zap"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
@@ -29,6 +29,7 @@ import (
 
 // IngressSource handles adding, updating, or removing mDNS record advertisements
 type IngressSource struct {
+	lg             *zap.Logger
 	namespace      string
 	notifyChan     chan<- resource.Resource
 	sharedInformer cache.SharedIndexInformer
@@ -48,7 +49,7 @@ func (i *IngressSource) onAdd(obj interface{}) {
 	advertiseRecords, err := i.buildRecords(obj, resource.Added)
 
 	if err != nil {
-		fmt.Println("Error adding ingress")
+		i.lg.Info("Error adding ingress", zap.Error(err), zap.Any("ingress", obj))
 		return
 	}
 
@@ -61,7 +62,7 @@ func (i *IngressSource) onDelete(obj interface{}) {
 	advertiseRecords, err := i.buildRecords(obj, resource.Deleted)
 
 	if err != nil {
-		fmt.Println("Error deleting ingress")
+		i.lg.Info("Error deleting ingress", zap.Error(err), zap.Any("ingress", obj))
 		return
 	}
 
@@ -73,7 +74,7 @@ func (i *IngressSource) onDelete(obj interface{}) {
 func (i *IngressSource) onUpdate(oldObj interface{}, newObj interface{}) {
 	oldResources, err1 := i.buildRecords(oldObj, resource.Updated)
 	if err1 != nil {
-		fmt.Printf("Error gathering old ingress resources: %s", err1)
+		i.lg.Info("Error gathering old ingress resources", zap.Error(err1), zap.Any("ingress", oldObj))
 	}
 
 	for _, record := range oldResources {
@@ -83,7 +84,7 @@ func (i *IngressSource) onUpdate(oldObj interface{}, newObj interface{}) {
 
 	newResources, err2 := i.buildRecords(newObj, resource.Updated)
 	if err2 != nil {
-		fmt.Printf("Error gathering new ingress resources: %s", err2)
+		i.lg.Info("Error gathering new ingress resources", zap.Error(err2), zap.Any("ingress", newObj))
 	}
 
 	for _, record := range newResources {
@@ -123,7 +124,7 @@ func (i *IngressSource) buildRecords(obj interface{}, action string) ([]resource
 		parsedHost, err := tld.Parse(fakeURL)
 
 		if err != nil {
-			log.Printf("Unable to parse hostname %s. %s", rule.Host, err.Error())
+			i.lg.Info("Unable to parse hostname", zap.Error(err), zap.Any("hostname", rule.Host))
 			continue
 		}
 
@@ -146,9 +147,10 @@ func (i *IngressSource) buildRecords(obj interface{}, action string) ([]resource
 }
 
 // NewIngressWatcher creates an IngressSource
-func NewIngressWatcher(factory informers.SharedInformerFactory, namespace string, notifyChan chan<- resource.Resource) IngressSource {
+func NewIngressWatcher(lg *zap.Logger, factory informers.SharedInformerFactory, namespace string, notifyChan chan<- resource.Resource) IngressSource {
 	ingressInformer := factory.Networking().V1().Ingresses().Informer()
 	i := &IngressSource{
+		lg:             lg,
 		namespace:      namespace,
 		notifyChan:     notifyChan,
 		sharedInformer: ingressInformer,
