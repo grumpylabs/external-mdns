@@ -99,7 +99,7 @@ func (s *ServiceSource) buildRecord(obj interface{}, action string) (resource.Re
 		return advertiseObj, nil
 	}
 
-	if hostnames, ok := service.Annotations["external-mdns.blakecovarrubias.com/hostnames"]; ok {
+	if hostnames, ok := service.Annotations["external-mdns.openrbg.io/hostnames"]; ok {
 		names := strings.Split(hostnames, ",")
 		for i := range names {
 			names[i] = strings.TrimSpace(names[i])
@@ -108,7 +108,7 @@ func (s *ServiceSource) buildRecord(obj interface{}, action string) (resource.Re
 	} else {
 		advertiseObj.Names = []string{service.Name}
 	}
-	if withoutNS, ok := service.Annotations["external-mdns.blakecovarrubias.com/without-namespace"]; ok {
+	if withoutNS, ok := service.Annotations["external-mdns.openrbg.io/without-namespace"]; ok {
 		advertiseObj.WithoutNamespace = strings.EqualFold(withoutNS, "true")
 	}
 

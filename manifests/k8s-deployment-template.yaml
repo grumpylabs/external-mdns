@@ -18,7 +18,7 @@ spec:
         runAsGroup: 65534
         runAsNonRoot: true
       hostNetwork: true
-      serviceAccountName: external-mdns # Assicurati che questo service account esista
+      serviceAccountName: external-mdns
       containers:
       - name: external-mdns
         securityContext:
@@ -26,16 +26,16 @@ spec:
           allowPrivilegeEscalation: false
           capabilities:
             drop: ["ALL"]
-        image: macrbg/external-mdns:0873b7f3 # Skaffold sostituirà questo con l'immagine buildata
+        image: macrbg/external-mdns:0873b7f3 
         args:
         - -source=ingress
         - -source=service
-        - -truncate-long-records=true # Abilita il troncamento dei record
+        - -truncate-long-records=true 
         - -publish-internal-services=true
         env:
           - name: EXTERNAL_MDNS_NAMESPACE
-            value: "" # Modifica se vuoi limitare a un namespace specifico, lascialo vuoto per tutti i namespace
+            value: "" 
           - name: EXTERNAL_MDNS_DEFAULT_NAMESPACE
-            value: "default" # Modifica se necessario
+            value: "default" 
           - name: EXTERNAL_MDNS_KUBECONFIG
-            value: "" # Generalmente non necessario in Minikube
+            value: "" 

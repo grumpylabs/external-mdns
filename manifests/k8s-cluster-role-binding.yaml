@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: external-mdns
-  namespace: default # Assicurati che il namespace sia corretto
+  namespace: default
