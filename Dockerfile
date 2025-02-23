@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.23 as build
+FROM scratch
 LABEL \
     maintainer="Blake Covarrubias <blake@covarrubi.as>, Robert B Gordon <rbg@openrbg.com>" \
     org.opencontainers.image.description="Advertises records for Kubernetes resources over multicast DNS." \
@@ -6,23 +6,8 @@ LABEL \
     org.opencontainers.image.source="git@github.com:grumpylabs/external-mdns" \
     org.opencontainers.image.title="external-mdns" \
     org.opencontainers.image.url="https://github.com/grumpylabs/external-mdns"
-
 ARG TARGETOS
 ARG TARGETARCH
-ARG TARGETVARIANT
 
-ADD . /go/src/github.com/grumpylabs/external-mdns/
-WORKDIR /go/src/github.com/grumpylabs/external-mdns
-
-RUN mkdir -p /release/etc &&\
-    echo nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin > /release/etc/passwd &&\
-    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=$(echo ${TARGETVARIANT} | cut -c2) \
-    go build \
-    -ldflags="-s -w" \
-    -o /release/external-mdns .
-
-
-FROM scratch
-COPY --from=build /release /
-USER nobody
+COPY bin/external-mdns-${TARGETOS}_${TARGETARCH} /external-mdns
 ENTRYPOINT ["/external-mdns"]
